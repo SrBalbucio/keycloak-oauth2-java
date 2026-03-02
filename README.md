@@ -54,6 +54,9 @@ KeycloakAuthConfig config = KeycloakAuthConfig.builder()
     .redirectPort(8765)
     .scope("openid")
     .build();
+
+KeycloakAuthProvider provider = new KeycloakAuthProvider(config);
+CallbackHandler callbackHandler = new CallbackHandler(provider);
 ```
 
 O `redirect_uri` usado na autorização e na troca de tokens é sempre `http://localhost:{redirectPort}/callback` e deve ser o mesmo configurado em **Valid redirect URIs** no client do Keycloak.
