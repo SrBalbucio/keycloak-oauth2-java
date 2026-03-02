@@ -1,4 +1,5 @@
 # Keycloak OAuth2 (Authorization Code + PKCE)
+[![](https://img.shields.io/badge/HyperPowered-Use%20the%20official%20repository-yellow?color=%23279BF8&cacheSeconds=3600)](https://maven.dev.hyperpowered.net/#/releases/balbucio/keycloakoauth/keycloak-oauth2-java/)
 
 Provedor mínimo de autenticação OAuth2 **Authorization Code + PKCE** para Keycloak. Abre o login no navegador, escuta o callback em localhost com um servidor Javalin e troca o código por tokens.
 
@@ -6,8 +7,6 @@ Provedor mínimo de autenticação OAuth2 **Authorization Code + PKCE** para Key
 - **Javalin 4.6.x** (servidor HTTP)
 - **PKCE** (code_verifier / code_challenge S256)
 - Servidor permanece aberto; várias rodadas de login sem reiniciar
-
-[![](https://img.shields.io/badge/HyperPowered-Use%20the%20official%20repository-yellow?color=%23279BF8&cacheSeconds=3600)](https://maven.dev.hyperpowered.net/#/releases/balbucio/keycloakoauth/keycloak-oauth2-java/)
 ---
 
 ## Pré-requisitos
