@@ -48,8 +48,8 @@ public class KeycloakOAuth2MainForTests {
                     String state = ctx.queryParam("state");
                     String error = ctx.queryParam("error");
                     String errorDescription = ctx.queryParam("error_description");
-                    String html = callbackHandler.handleCallback(code, state, error, errorDescription);
-                    ctx.contentType("text/html; charset=UTF-8").result(html);
+                    CallbackResult result = callbackHandler.handleCallback(code, state, error, errorDescription);
+                    ctx.contentType("text/html; charset=UTF-8").result(result.getHtml());
                 });
 
         System.out.println("Callback server: http://localhost:" + config.getRedirectPort());

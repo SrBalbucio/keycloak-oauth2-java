@@ -31,30 +31,35 @@ public class CallbackHandler {
 
     /**
      * Handles GET /callback. Query params: code, state (on success) or error, error_description (on error).
-     * Exchanges code for tokens and returns HTML with the result.
+     * Exchanges code for tokens and returns a result containing the HTML page and, on success, the tokens.
      */
-    public String handleCallback(String code, String state, String error, String errorDescription) {
+    public CallbackResult handleCallback(String code, String state, String error, String errorDescription) {
         KeycloakAuthConfig config = provider.getConfig();
 
         if (error != null) {
-            return buildErrorPage(error, errorDescription != null ? errorDescription : "");
+            String html = buildErrorPage(error, errorDescription != null ? errorDescription : "");
+            return CallbackResult.error(error, errorDescription, html);
         }
 
         if (code == null || code.isEmpty() || state == null || state.isEmpty()) {
-            return buildErrorPage("invalid_request", "Missing code or state parameter.");
+            String html = buildErrorPage("invalid_request", "Missing code or state parameter.");
+            return CallbackResult.error("invalid_request", "Missing code or state parameter.", html);
         }
 
         String codeVerifier = provider.consumeCodeVerifierForState(state);
         if (codeVerifier == null) {
-            return buildErrorPage("invalid_state", "Unknown or already used state. Please start the login again.");
+            String html = buildErrorPage("invalid_state", "Unknown or already used state. Please start the login again.");
+            return CallbackResult.error("invalid_state", "Unknown or already used state. Please start the login again.", html);
         }
 
         try {
             String tokenResponseBody = exchangeCodeForTokens(config, code, codeVerifier);
             JsonNode json = OBJECT_MAPPER.readTree(tokenResponseBody);
-            return buildSuccessPage(config.isDevMode() ? json : null);
+            String html = buildSuccessPage(config.isDevMode() ? json : null);
+            return CallbackResult.success(json, html);
         } catch (IOException e) {
-            return buildErrorPage("token_exchange_failed", e.getMessage());
+            String html = buildErrorPage("token_exchange_failed", e.getMessage());
+            return CallbackResult.error("token_exchange_failed", e.getMessage(), html);
         }
     }
 
@@ -74,14 +79,15 @@ public class CallbackHandler {
                 .build();
 
         Response response = HTTP_CLIENT.newCall(request).execute();
+        okhttp3.ResponseBody responseBody = response.body();
         if (!response.isSuccessful()) {
-            String body = response.body() != null ? response.body().string() : "";
+            String body = responseBody != null ? responseBody.string() : "";
             throw new IOException("Token request failed: " + response.code() + " " + body);
         }
-        if (response.body() == null) {
+        if (responseBody == null) {
             throw new IOException("Empty token response");
         }
-        return response.body().string();
+        return responseBody.string();
     }
 
     private static String buildSuccessPage(@Nullable JsonNode json) {
