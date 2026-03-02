@@ -15,20 +15,6 @@ import java.security.cert.X509Certificate;
 public class KeycloakOAuth2MainForTests {
 
     public static void main(String[] args) throws NoSuchAlgorithmException, KeyManagementException {
-        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() { return null; }
-            public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-            public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-
-        } };
-
-        SSLContext sc = SSLContext.getInstance("SSL");
-        sc.init(null, trustAllCerts, new java.security.SecureRandom());
-        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-        HostnameVerifier allHostsValid = (hostname, session) -> true;
-        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-
         String keycloakUrl = System.getenv("KEYCLOAK_URL");
         String keycloakClientId = System.getenv("KEYCLOAK_CLIENT_ID");
         String keycloakRealm = System.getenv("KEYCLOAK_REALM");
