@@ -38,6 +38,10 @@ public class TokenData {
     @Nullable
     String scope;
 
+    /** Parsed ID token claims (sub, iss, aud, exp, preferred_username, etc.). Null if no id_token or parse failed. */
+    @Nullable
+    IdTokenData idTokenData;
+
     /**
      * Parses a token response from the given JsonNode.
      *
@@ -49,14 +53,16 @@ public class TokenData {
         if (node == null || node.isNull() || !node.has("access_token")) {
             return null;
         }
+        String idTokenRaw = textOrNull(node, "id_token");
         return new TokenData(
                 node.get("access_token").asText(),
                 textOrNull(node, "refresh_token"),
-                textOrNull(node, "id_token"),
+                idTokenRaw,
                 intOrNull(node, "expires_in"),
                 intOrNull(node, "refresh_expires_in"),
                 textOrNull(node, "token_type"),
-                textOrNull(node, "scope")
+                textOrNull(node, "scope"),
+                IdTokenData.fromJwt(idTokenRaw)
         );
     }
 

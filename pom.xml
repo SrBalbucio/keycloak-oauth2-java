@@ -6,7 +6,7 @@
 
     <groupId>balbucio.keycloakoauth</groupId>
     <artifactId>keycloak-oauth2-java</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -64,14 +64,6 @@
                             <version>1.18.42</version>
                         </path>
                     </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <mainClass>balbucio.keycloakoauth.KeycloakOAuth2Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>
