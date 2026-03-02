@@ -1,5 +1,7 @@
 package balbucio.keycloakoauth;
 
+import lombok.Getter;
+
 import java.awt.Desktop;
 import java.io.IOException;
 import java.net.URI;
@@ -12,11 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * Starts the OAuth2 Authorization Code + PKCE flow: generates state and PKCE,
  * stores code_verifier by state, builds the Keycloak authorization URL, and opens the browser.
  */
+@Getter
 public class KeycloakAuthProvider {
 
     private static final int STATE_BYTES = 32;
 
     private final KeycloakAuthConfig config;
+    /**
+     * -- GETTER --
+     *  Returns the storage map (state -> code_verifier) for use by the callback handler.
+     */
     private final ConcurrentHashMap<String, String> stateToCodeVerifier = new ConcurrentHashMap<String, String>();
 
     public KeycloakAuthProvider(KeycloakAuthConfig config) {
@@ -24,21 +31,11 @@ public class KeycloakAuthProvider {
     }
 
     /**
-     * Returns the storage map (state -> code_verifier) for use by the callback handler.
-     */
-    public ConcurrentHashMap<String, String> getStateToCodeVerifier() {
-        return stateToCodeVerifier;
-    }
-
-    public KeycloakAuthConfig getConfig() {
-        return config;
-    }
-
-    /**
      * Generates state and PKCE, stores code_verifier, builds the authorization URL and opens the default browser.
      * The redirect will hit the callback server; the callback must use the same provider to retrieve the code_verifier.
+     * @return Authorization URL
      */
-    public void startLogin() {
+    public String startLogin() {
         String state = generateState();
         String codeVerifier = PkceUtil.generateCodeVerifier();
         String codeChallenge = PkceUtil.generateCodeChallenge(codeVerifier);
@@ -46,6 +43,7 @@ public class KeycloakAuthProvider {
 
         String authUrl = buildAuthorizationUrl(state, codeChallenge);
         openBrowser(authUrl);
+        return authUrl;
     }
 
     /**

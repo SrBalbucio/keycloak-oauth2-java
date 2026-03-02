@@ -6,6 +6,7 @@ import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +52,7 @@ public class CallbackHandler {
         try {
             String tokenResponseBody = exchangeCodeForTokens(config, code, codeVerifier);
             JsonNode json = OBJECT_MAPPER.readTree(tokenResponseBody);
-            return buildSuccessPage(json);
+            return buildSuccessPage(config.isDevMode() ? json : null);
         } catch (IOException e) {
             return buildErrorPage("token_exchange_failed", e.getMessage());
         }
@@ -83,14 +84,18 @@ public class CallbackHandler {
         return response.body().string();
     }
 
-    private static String buildSuccessPage(JsonNode json) {
+    private static String buildSuccessPage(@Nullable JsonNode json) {
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Login successful</title></head><body>");
         html.append("<h1>Login successful</h1>");
-        html.append("<p>Tokens received. You can close this page.</p>");
-        html.append("<pre style=\"background:#f5f5f5;padding:1em;overflow:auto;\">");
-        html.append(escapeHtml(json.toString()));
-        html.append("</pre>");
+        html.append("<p>You can close this page.</p>");
+
+        if (json != null) {
+            html.append("<pre style=\"background:#f5f5f5;padding:1em;overflow:auto;\">");
+            html.append(escapeHtml(json.toString()));
+            html.append("</pre>");
+        }
+
         html.append("</body></html>");
         return html.toString();
     }

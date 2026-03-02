@@ -25,6 +25,8 @@ public class KeycloakAuthConfig {
     /** OAuth2 scope. Defaults to "openid" if not set. */
     @Builder.Default
     String scope = "openid";
+    @Builder.Default
+    boolean devMode = false;
 
     /**
      * Builds the redirect URI for this config.

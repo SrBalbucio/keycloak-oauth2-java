@@ -2,6 +2,11 @@ package balbucio.keycloakoauth;
 
 import io.javalin.Javalin;
 
+import javax.net.ssl.*;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+
 /**
  * Use this to run the OAuth2 flow from tests or to create test-specific configurations
  * (e.g. different port, realm, or client). You can extend this class or add more test
@@ -9,11 +14,29 @@ import io.javalin.Javalin;
  */
 public class KeycloakOAuth2MainForTests {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws NoSuchAlgorithmException, KeyManagementException {
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() { return null; }
+            public void checkClientTrusted(X509Certificate[] certs, String authType) { }
+            public void checkServerTrusted(X509Certificate[] certs, String authType) { }
+
+        } };
+
+        SSLContext sc = SSLContext.getInstance("SSL");
+        sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+        HostnameVerifier allHostsValid = (hostname, session) -> true;
+        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+
+        String keycloakUrl = System.getenv("KEYCLOAK_URL");
+        String keycloakClientId = System.getenv("KEYCLOAK_CLIENT_ID");
+        String keycloakRealm = System.getenv("KEYCLOAK_REALM");
+
         KeycloakAuthConfig config = KeycloakAuthConfig.builder()
-                .baseUrl("http://localhost:8080")
-                .realm("master")
-                .clientId("my-app")
+                .baseUrl(keycloakUrl)
+                .realm(keycloakRealm)
+                .clientId(keycloakClientId)
                 .redirectPort(8765)
                 .scope("openid")
                 .build();
@@ -29,10 +52,9 @@ public class KeycloakOAuth2MainForTests {
                             "</body></html>");
                 })
                 .get("/login", ctx -> {
-                    provider.startLogin();
                     ctx.html("<html><head><meta charset=\"UTF-8\"><title>Redirecting</title></head><body>" +
                             "<p>Opening Keycloak login in your browser. If it did not open, " +
-                            "<a href=\"" + config.getAuthorizationEndpoint() + "\">click here</a>.</p>" +
+                            "<a href=\"" + provider.startLogin() + "\">click here</a>.</p>" +
                             "</body></html>");
                 })
                 .get("/callback", ctx -> {
