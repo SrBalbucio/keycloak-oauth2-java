@@ -1,6 +1,12 @@
 package balbucio.keycloakoauth;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 import java.awt.Desktop;
 import java.io.IOException;
@@ -9,6 +15,7 @@ import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Starts the OAuth2 Authorization Code + PKCE flow: generates state and PKCE,
@@ -18,13 +25,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class KeycloakAuthProvider {
 
     private static final int STATE_BYTES = 32;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build();
 
     private final KeycloakAuthConfig config;
     /**
      * -- GETTER --
      *  Returns the storage map (state -> code_verifier) for use by the callback handler.
      */
-    private final ConcurrentHashMap<String, String> stateToCodeVerifier = new ConcurrentHashMap<String, String>();
+    private final ConcurrentHashMap<String, String> stateToCodeVerifier = new ConcurrentHashMap<>();
 
     public KeycloakAuthProvider(KeycloakAuthConfig config) {
         this.config = config;
@@ -53,6 +65,57 @@ public class KeycloakAuthProvider {
         return stateToCodeVerifier.remove(state);
     }
 
+    /**
+     * Refreshes the access token using the refresh token from the given TokenData.
+     * Calls the Keycloak token endpoint with grant_type=refresh_token (public client: client_id only).
+     *
+     * @param tokenData the current tokens, must contain a non-null refresh token
+     * @return new TokenData with the refreshed access token (and possibly a new refresh token)
+     * @throws IllegalArgumentException if tokenData or its refresh token is null
+     * @throws IOException if the token request fails (e.g. refresh token expired, network error)
+     */
+    public TokenData refreshTokens(TokenData tokenData) throws IOException {
+        if (tokenData == null) {
+            throw new IllegalArgumentException("TokenData must not be null");
+        }
+        String refreshToken = tokenData.getRefreshToken();
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            throw new IllegalArgumentException("TokenData must contain a refresh token");
+        }
+        String tokenResponseBody = exchangeRefreshToken(refreshToken);
+        JsonNode json = OBJECT_MAPPER.readTree(tokenResponseBody);
+        TokenData refreshed = TokenData.fromJson(json);
+        if (refreshed == null) {
+            throw new IOException("Token endpoint did not return a valid token response");
+        }
+        return refreshed;
+    }
+
+    private String exchangeRefreshToken(String refreshToken) throws IOException {
+        FormBody form = new FormBody.Builder()
+                .add("grant_type", "refresh_token")
+                .add("client_id", config.getClientId())
+                .add("refresh_token", refreshToken)
+                .build();
+
+        Request request = new Request.Builder()
+                .url(config.getTokenEndpoint())
+                .post(form)
+                .addHeader("Content-Type", "application/x-www-form-urlencoded")
+                .build();
+
+        Response response = HTTP_CLIENT.newCall(request).execute();
+        okhttp3.ResponseBody responseBody = response.body();
+        if (!response.isSuccessful()) {
+            String body = responseBody != null ? responseBody.string() : "";
+            throw new IOException("Refresh token request failed: " + response.code() + " " + body);
+        }
+        if (responseBody == null) {
+            throw new IOException("Empty token response");
+        }
+        String body = responseBody.string();
+        return body;
+    }
     private String generateState() {
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[STATE_BYTES];
